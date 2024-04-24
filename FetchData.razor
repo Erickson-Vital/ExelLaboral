@@ -1,0 +1,74 @@
+﻿@page "/fetchdata"
+@inject HttpClient Http
+
+@using Microsoft.AspNetCore.Components.Forms
+@using OfficeOpenXml
+@using System.IO
+@using System.Net.Http.Json
+@inject HttpClient HttpClient
+
+<h3>Importar Excel</h3>
+
+<InputFile OnChange="@HandleFileSelected" />
+<button @onclick="ImportarExcel">Importar</button>
+
+@code {
+    private IBrowserFile file;
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        file = e.File;
+    }
+
+    private async Task ImportarExcel()
+    {
+        if (file != null)
+        {
+            using (var stream = file.OpenReadStream())
+            {
+                using (var package = new ExcelPackage(stream))
+                {
+                    var worksheet = package.Workbook.Worksheets[0];
+                    var rowCount = worksheet.Dimension.Rows;
+
+                    List<object> data = new List<object>();
+
+                    for (int row = 2; row <= rowCount; row++)
+                    {
+                        var id = worksheet.Cells[row, 1].Value?.ToString();
+                        var matricula = worksheet.Cells[row, 2].Value?.ToString();
+                        var descricao = worksheet.Cells[row, 3].Value?.ToString();
+                        var dataInicio = worksheet.Cells[row, 4].Value?.ToString();
+                        var dataFinal = worksheet.Cells[row, 5].Value?.ToString();
+
+                        var rowData = new
+                        {
+                            ID = id,
+                            Matricula = matricula,
+                            Descricao = descricao,
+                            Data_Inicio = dataInicio,
+                            Data_Final = dataFinal
+                        };
+
+                        data.Add(rowData);
+                    }
+
+                    var response = await HttpClient.PostAsJsonAsync("sua/api/endpoint", data);
+
+                    // Exibindo a resposta no console
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine(responseContent);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        // Manipula o caso de sucesso
+                    }
+                    else
+                    {
+                        // Manipula o caso de falha
+                    }
+                }
+            }
+        }
+    }
+}
